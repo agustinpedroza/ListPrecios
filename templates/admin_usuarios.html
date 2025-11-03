@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Administración de Usuarios</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="admin-container">
+    <h2>Administración de Usuarios</h2>
+    <div style="display:flex;gap:10px;justify-content:center;margin-bottom:10px;">
+  <button onclick="mostrarCrear()">Crear Usuario</button>
+  <button onclick="mostrarEliminar()">Eliminar Usuario</button>
+  <button onclick="mostrarCambiarClave()">Cambiar Clave</button>
+  <button onclick="mostrarEditar()">Editar Usuario</button>
+  <button onclick="volverBusqueda()" style="background:linear-gradient(90deg,#bfc2d4 0%,#4e54c8 100%);color:#fff;">Volver</button>
+    </div>
+    <div id="admin-form"></div>
+  </div>
+  <script>
+    function volverBusqueda() {
+      window.location.href = '/busqueda';
+    }
+    function mostrarCrear() {
+      document.getElementById('admin-form').innerHTML = `
+        <h3>Crear Usuario</h3>
+        <form id='form-crear' onsubmit='crearUsuario(event)'>
+            <input type='text' name='usuario' placeholder='Usuario' required><br>
+          <input type='text' name='nombre_completo' placeholder='Nombre completo' required><br>
+          <input type='password' name='clave' placeholder='Clave' required><br>
+          <select name='almacen' required>
+            <option value='' disabled selected>Seleccione almacén</option>
+            {% for cod, nombre in almacenes %}
+              <option value="{{ cod }}">{{ nombre }}</option>
+            {% endfor %}
+          </select><br>
+          <select name='perfil'>
+            <option value='1'>Usuario</option>
+            <option value='2'>Mensajero</option>
+            <option value='3'>Administrador</option>
+          </select><br>
+          <select name='estado' required>
+            <option value='A' selected>Activo</option>
+            <option value='I'>Inactivo</option>
+          </select><br>
+          <button type='submit'>Crear</button>
+        </form>`;
+    }
+    function mostrarEliminar() {
+      document.getElementById('admin-form').innerHTML = `
+        <h3>Eliminar Usuario</h3>
+        <form id='form-eliminar' onsubmit='eliminarUsuario(event)'>
+            <input type='text' name='usuario' placeholder='Usuario' required><br>
+          <button type='submit'>Eliminar</button>
+        </form>`;
+    }
+    function mostrarCambiarClave() {
+      document.getElementById('admin-form').innerHTML = `
+        <h3>Cambiar Clave</h3>
+        <form id='form-cambiar' onsubmit='cambiarClave(event)'>
+            <input type='text' name='usuario' placeholder='Usuario' required><br>
+          <input type='password' name='nueva_clave' placeholder='Nueva Clave' required><br>
+          <button type='submit'>Cambiar</button>
+        </form>`;
+    }
+    async function cargarDatosUsuario(usuario) {
+      if (!usuario) return;
+      const res = await fetch(`/api/usuarios/datos?usuario=${encodeURIComponent(usuario)}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.ok && data.usuario) {
+        document.querySelector("#form-editar [name='nombre_completo']").value = data.usuario.nombre;
+        document.querySelector("#perfil_editar").value = data.usuario.perfil;
+        // Seleccionar el almacén correcto en el select
+        const almacenSelect = document.querySelector("#almacen_editar");
+        for (let i = 0; i < almacenSelect.options.length; i++) {
+          if (almacenSelect.options[i].value == data.usuario.almacen) {
+            almacenSelect.selectedIndex = i;
+            break;
+          }
+        }
+        document.querySelector("#estado_editar").value = data.usuario.estado;
+      } else {
+        document.querySelector("#form-editar [name='nombre_completo']").value = '';
+        document.querySelector("#perfil_editar").value = '';
+        document.querySelector("#almacen_editar").value = '';
+        document.querySelector("#estado_editar").value = '';
+        alert('Usuario no encontrado');
+      }
+    }
+    function mostrarEditar() {
+      document.getElementById('admin-form').innerHTML = `
+        <h3>Editar Usuario</h3>
+        <form id='form-editar' onsubmit='editarUsuario(event)'>
+          <input type='text' name='usuario' placeholder='Usuario' required onblur='cargarDatosUsuario(this.value)'><br>
+          <input type='text' name='nombre_completo' placeholder='Nuevo nombre completo' required><br>
+          <select name='perfil' required id='perfil_editar'>
+            <option value='1'>Usuario</option>
+            <option value='2'>Mensajero</option>
+            <option value='3'>Administrador</option>
+          </select><br>
+          <select name='almacen' required id='almacen_editar'>
+            <option value='' disabled selected>Seleccione almacén</option>
+            {% for cod, nombre in almacenes %}
+              <option value="{{ cod }}">{{ nombre }}</option>
+            {% endfor %}
+          </select><br>
+          <select name='estado' required id='estado_editar'>
+            <option value='A'>Activo</option>
+            <option value='I'>Inactivo</option>
+          </select><br>
+          <button type='submit'>Guardar cambios</button>
+        </form>`;
+    }
+      async function editarUsuario(e) {
+        e.preventDefault();
+        const form = e.target;
+        const usuario = form.usuario.value.trim();
+        const nombre_completo = form.nombre_completo.value.trim();
+        const perfil = form.perfil.value;
+        const almacen = form.almacen.value;
+        const estado = form.estado.value;
+        const res = await fetch('/api/usuarios/editar', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, nombre_completo, perfil, almacen, estado })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alert('Usuario actualizado correctamente');
+          form.reset();
+        } else {
+          alert('Error: ' + (data.error || 'No se pudo editar el usuario'));
+        }
+      }
+    async function crearUsuario(e) {
+      e.preventDefault();
+      const form = e.target;
+        const usuario = form.usuario.value.trim();
+        const nombre_completo = form.nombre_completo.value.trim();
+        const clave = form.clave.value.trim();
+        const almacen = form.almacen.value;
+        const perfil = form.perfil.value;
+        const estado = form.estado.value;
+        const res = await fetch('/api/usuarios/crear', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuario, nombre_completo, clave, almacen, perfil, estado })
+        });
+      const data = await res.json();
+      if (data.ok) {
+        alert('Usuario creado correctamente');
+        form.reset();
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo crear el usuario'));
+      }
+    }
+    async function eliminarUsuario(e) {
+      e.preventDefault();
+      const form = e.target;
+      const usuario = form.usuario.value.trim();
+      const res = await fetch('/api/usuarios/eliminar', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert('Usuario eliminado correctamente');
+        form.reset();
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo eliminar el usuario'));
+      }
+    }
+    async function cambiarClave(e) {
+      e.preventDefault();
+      const form = e.target;
+      const usuario = form.usuario.value.trim();
+      const nueva_clave = form.nueva_clave.value.trim();
+      const res = await fetch('/api/usuarios/cambiar_clave', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario, nueva_clave })
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert('Clave cambiada correctamente');
+        form.reset();
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo cambiar la clave'));
+      }
+    }
+    // Mostrar por defecto el formulario de crear usuario al cargar la página
+    window.onload = mostrarCrear;
+  </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Búsqueda de Productos</title>
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script>
+    // Detectar sistema operativo y ajustar clase
+    function detectarSO() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      let so = 'windows';
+      if (/android/i.test(ua)) {
+        so = 'android';
+      } else if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) {
+        so = 'ios';
+      }
+      document.body.classList.add(so);
+    }
+    window.onload = detectarSO;
+    let timeoutId;
+    function buscarProductos() {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        const filtro = document.getElementById('filtro').value.trim();
+        const almacen = document.getElementById('almacen_select').value;
+        if (!filtro) {
+          document.getElementById('resultados').innerHTML = '';
+          return;
+        }
+        const res = await fetch(`/buscar_productos?q=${encodeURIComponent(filtro)}&almacen=${encodeURIComponent(almacen)}`);
+        const productos = await res.json();
+        let html = '<table style="width:100%;table-layout:fixed;"><tr><th style="width:70%">Descripción</th><th style="width:15%">Referencia</th><th style="width:15%">Marca</th></tr>';
+        for (const p of productos) {
+          let marca = p.marca;
+          if (marca && marca.includes('-')) {
+            marca = marca.substring(marca.lastIndexOf('-') + 1).trim();
+          }
+          html += `<tr onclick="verDetalle('${p.referencia}')">
+            <td class="desc" style="width:70%;white-space:normal;word-break:break-word;">${p.descripcion}</td>
+            <td class="ref" style="width:15%;white-space:normal;word-break:break-word;">${p.referencia}</td>
+            <td class="marca" style="width:15%;white-space:normal;word-break:break-word;">${marca}</td>
+          </tr>`;
+        }
+        html += '</table>';
+        document.getElementById('resultados').innerHTML = html;
+      }, 300);
+    }
+    function verDetalle(ref) {
+      window.location.href = `/detalle_producto/${encodeURIComponent(ref)}`;
+    }
+  </script>
+</head>
+<body>
+  <div class="login-container" style="padding-top: 0.5em;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.2em;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <img src="/static/logo.png" alt="Logo" style="height:32px;width:auto;">
+      </div>
+  <button onclick="cerrarSesion()" style="display:block;width:90px;margin:0;background:linear-gradient(90deg,#6c63ff 0%,#4e54c8 100%);color:#fff;border:none;border-radius:16px;padding:6px 0;cursor:pointer;font-size:0.8rem;font-weight:600;box-shadow:0 2px 8px rgba(76,99,255,0.08);">Salir</button>
+  {% if session['perfil']|string == '3' %}
+  <a href="/admin_usuarios" style="display:inline-block;width:120px;margin-left:8px;background:linear-gradient(90deg,#45a049 0%,#6c63ff 100%);color:#fff;text-align:center;border:none;border-radius:16px;padding:6px 0;cursor:pointer;font-size:0.8rem;font-weight:600;box-shadow:0 2px 8px rgba(76,99,255,0.08);text-decoration:none;">Administrar Usuarios</a>
+  {% endif %}
+    </div>
+    <script>
+      function cerrarSesion() {
+        fetch('/logout', {method:'POST', credentials:'include'})
+          .then(() => window.location.href = '/login');
+      }
+    </script>
+    <div style="margin-bottom: 2px;">
+      <label for="almacen_select" style="font-weight:600;color:#4e54c8;font-size:1rem;margin-right:8px;">Almacén:</label>
+      <select id="almacen_select" onchange="buscarProductos()" style="padding:7px 18px;border-radius:14px;border:1.5px solid #bfc2d4;background:#f7f8fc;color:#4e54c8;font-size:1rem;font-weight:500;box-shadow:0 2px 8px rgba(76,99,255,0.07);outline:none;transition:border-color 0.2s;">
+        {% for cod, nombre in almacenes %}
+          <option value="{{ cod }}" {% if cod|string == codalmacen|string %}selected{% endif %}>{{ nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <h2 class="busqueda-titulo" style="margin-bottom:0.1em;">Buscar</h2>
+    <input type="text" id="filtro" class="busqueda-input" placeholder="Buscar por descripción..." oninput="buscarProductos()" autofocus autocomplete="off" style="margin-bottom:0.02em;">
+    <div id="resultados" class="busqueda-resultados" style="margin-top:0.02em;"></div>
+    <!-- El almacén seleccionado solo afecta la búsqueda, no la sesión -->
+  </div>
+</body>
+</html>

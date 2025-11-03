@@ -1,0 +1,14 @@
+Flask==3.1.0
+flask-cors==5.0.1
+pyodbc==5.2.0
+Werkzeug==3.1.3
+Jinja2==3.1.6
+itsdangerous==2.2.0
+click==8.1.8
+certifi==2025.7.9
+colorama==0.4.6
+pandas==2.2.3
+numpy==2.2.6
+requests==2.32.4
+waitress==3.0.2
+# Puedes agregar más paquetes según lo necesites

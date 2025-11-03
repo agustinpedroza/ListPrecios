@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login</title>
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <script>
+    const ORIGIN = window.origin.startsWith("file://")
+      ? "http://10.0.2.2:8444"
+      : window.location.origin;
+    function encodeUTF16LE(str) {
+      const buf = new ArrayBuffer(str.length * 2);
+      const vw  = new DataView(buf);
+      for (let i = 0; i < str.length; i++) {
+        vw.setUint16(i * 2, str.charCodeAt(i), true);
+      }
+      return buf;
+    }
+    function wordArrayFromBuffer(buffer) {
+      const u8 = buffer instanceof Uint8Array
+        ? buffer
+        : new Uint8Array(buffer);
+      return CryptoJS.lib.WordArray.create(u8);
+    }
+    async function sha256hex_utf16le(text) {
+      const buf = encodeUTF16LE(text);
+      if (window.crypto?.subtle?.digest) {
+        const h = await crypto.subtle.digest("SHA-256", buf);
+        return Array.from(new Uint8Array(h))
+          .map(b => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+      return CryptoJS.SHA256(wordArrayFromBuffer(buf))
+                     .toString(CryptoJS.enc.Hex);
+    }
+    async function enviarLogin(event) {
+      event.preventDefault();
+      const usuario  = document.getElementById("usuario").value.trim();
+      const pwdPlain = document.getElementById("password").value;
+      let passwordHash;
+      try {
+        passwordHash = await sha256hex_utf16le(pwdPlain);
+      } catch (err) {
+        return document.getElementById("mensaje")
+          .innerText = "❌ Error al generar hash: " + err;
+      }
+      try {
+        const res = await fetch(`${ORIGIN}/login`, {
+          method:      "POST",
+          credentials: "include",
+          headers:     { "Content-Type": "application/json" },
+          body:        JSON.stringify({ usuario, password: passwordHash })
+        });
+        const json = await res.json();
+        if (json.redirigir) {
+          window.location.href = ORIGIN + json.redirigir;
+        } else {
+          document.getElementById("mensaje").innerText = json.mensaje;
+        }
+      } catch (error) {
+        document.getElementById("mensaje")
+          .innerText = "❌ Error en la solicitud: " + error.message;
+      }
+    }
+  </script>
+</head>
+<body>
+  <div class="login-container">
+  <img src="/static/logo.png" alt="Logo" style="display:block;margin:12px auto 12px auto;max-width:207px;max-height:138px;border-radius:18px;box-shadow:0 2px 12px rgba(76,99,255,0.10);background:#fff;padding:8px;">
+  <h2 style="font-size:1.05rem;font-weight:500;letter-spacing:2px;color:#4e54c8;font-family:'Segoe UI',Arial,sans-serif;margin-bottom:12px;">Iniciar sesión</h2>
+    <form onsubmit="enviarLogin(event)">
+      <input type="text"    id="usuario"  placeholder="Usuario"     required>
+      <input type="password" id="password" placeholder="Contraseña"  required>
+      <button type="submit">Ingresar</button>
+    </form>
+    <pre id="mensaje"></pre>
+  </div>
+</body>
+</html>
