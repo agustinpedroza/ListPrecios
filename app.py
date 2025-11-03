@@ -13,7 +13,7 @@ app.permanent_session_lifetime = timedelta(hours=1)
 
 @app.before_request
 def make_session_permanent():
-    session.permanent = True    tail app.py
+    session.permanent = True
 
 def require_admin():
     perfil = session.get('perfil')
@@ -239,4 +239,4 @@ if __name__ == '__main__':
         print('✅ Conexión a SQL Server activa.')
     else:
         print('❌ No se pudo conectar a SQL Server.')
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=8000)
