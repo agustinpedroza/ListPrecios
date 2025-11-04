@@ -6,7 +6,8 @@ git reset --hard origin/master
 
 # Mueve archivos de configuración
 mv /cloudclusters/ListPrecios/flask.conf /cloudclusters/config/nginx/conf.d/flask.conf
-mv /cloudclusters/ListPrecios/uwsgi.conf /cloudclusters/config/nginx/conf.d/sites-enabled/uwsgi.conf
+mv /cloudclusters/ListPrecios/uwsgi.conf /cloudclusters/config/nginx/sites-enabled/uwsgi.conf
+mv /cloudclusters/ListPrecios/uwsgi.ini /cloudclusters/config/uwsgi.ini
 # Reinicia Nginx
 supervisorctl restart nginx
 
